@@ -1,0 +1,65 @@
+<!-- vod_stepper/frontend/index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>New World VOD Analyzer</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; margin-top: 50px; }
+    input { width: 400px; padding: 10px; }
+    button { padding: 10px 20px; margin-left: 10px; }
+    #result { margin-top: 30px; font-size: 1.2em; }
+  </style>
+</head>
+<body>
+
+  <h1>🛡️ New World VOD Analyzer</h1>
+  <p>Paste a YouTube link below to see how long you held point</p>
+
+  <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=..." />
+  <button onclick="analyze()">Analyze</button>
+
+  <div id="loading" style="display:none;">⏳ Analyzing video, please wait...</div>
+  <div id="result"></div>
+
+  <script>
+    async function analyze() {
+      const url = document.getElementById("url").value;
+      const result = document.getElementById("result");
+      const loading = document.getElementById("loading");
+
+      result.innerHTML = "";
+      loading.style.display = "block";
+
+      try {
+        const response = await fetch("http://127.0.0.1:5000/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: url })
+        });
+
+        const data = await response.json();
+        loading.style.display = "none";
+
+        if (data.error) {
+          result.innerHTML = `❌ Error: ${data.error}`;
+        } else {
+          const minutes = Math.floor(data.on_point_seconds / 60);
+          const seconds = data.on_point_seconds % 60;
+          const total = Math.floor(data.total_seconds / 60) + ":" + String(data.total_seconds % 60).padStart(2, '0');
+
+          result.innerHTML = `
+            <p>🕒 Total Match Length: <strong>${total}</strong></p>
+            <p>🛡️ Time on Point: <strong>${minutes}:${String(seconds).padStart(2, '0')}</strong></p>
+            <p>📊 Control Rate: <strong>${data.percentage}%</strong></p>
+          `;
+        }
+      } catch (err) {
+        loading.style.display = "none";
+        result.innerHTML = `❌ Request failed: ${err}`;
+      }
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,7 @@
+# Ignore large generated folders
+temp_videos/
+output/
+*.mp4
+*.png
+*.zip
+__pycache__/
