@@ -1,30 +1,19 @@
-# vod_stepper/app.py
-
 from flask import Flask, request, jsonify
-from flask_cors import CORS
-import os
-import uuid
-
 from downloader import download_video
 from frame_extractor import extract_frames
 from on_point_detector import analyze_frames
-from utils import save_report
+import os
 
 app = Flask(__name__)
-CORS(app)
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
-    data = request.get_json()
-    url = data.get("url")
-
-    if not url:
-        return jsonify({"error": "No URL provided"}), 400
-
     try:
-        # Generate unique ID for this request
-        run_id = str(uuid.uuid4())
+        data = request.get_json()
+        url = data.get("url")
+
         video_path = download_video(url)
+        run_id = os.path.splitext(os.path.basename(video_path))[0]
         frame_dir = os.path.join("output", "frames", run_id)
         os.makedirs(frame_dir, exist_ok=True)
 
@@ -45,4 +34,5 @@ def analyze():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    from waitress import serve
+    serve(app, host="0.0.0.0", port=5000)
