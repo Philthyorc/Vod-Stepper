@@ -1,10 +1,10 @@
 # vod_stepper/app.py
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import time
+import yt_dlp
 
 app = Flask(__name__)
-CORS(app)  # 👈 Enables cross-origin requests from Netlify or anywhere
+CORS(app)
 
 @app.route('/')
 def index():
@@ -22,11 +22,17 @@ def analyze():
     if not url:
         return jsonify({'error': 'No URL provided'}), 400
 
-    # TODO: Replace this with your actual logic that analyzes the video
-    # Dummy values for testing
-    time.sleep(1)
-    on_point_seconds = 157  # placeholder
-    total_seconds = 340     # placeholder
+    try:
+        # Extract video metadata (including duration in seconds)
+        ydl_opts = {'quiet': True, 'skip_download': True}
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            total_seconds = int(info['duration'])
+    except Exception as e:
+        return jsonify({'error': f'Failed to retrieve video info: {str(e)}'}), 500
+
+    # Placeholder logic: fake time-on-point until detector is wired in
+    on_point_seconds = int(total_seconds * 0.46)
     percentage = round((on_point_seconds / total_seconds) * 100, 2)
 
     return jsonify({
@@ -37,4 +43,3 @@ def analyze():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
-
