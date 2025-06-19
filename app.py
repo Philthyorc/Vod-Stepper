@@ -22,13 +22,18 @@ def analyze():
     if not url:
         return jsonify({'error': 'No URL provided'}), 400
 
+    # 🔁 Convert short youtu.be/ links to full format
+    if "youtu.be/" in url:
+        video_id = url.split("youtu.be/")[-1].split("?")[0]
+        url = f"https://www.youtube.com/watch?v={video_id}"
+
     try:
         yt = YouTube(url)
         total_seconds = yt.length
     except Exception as e:
         return jsonify({'error': f'Failed to retrieve video info: {str(e)}'}), 500
 
-    # Placeholder for point detection
+    # Placeholder logic for point detection
     on_point_seconds = int(total_seconds * 0.46)
     percentage = round((on_point_seconds / total_seconds) * 100, 2)
 
