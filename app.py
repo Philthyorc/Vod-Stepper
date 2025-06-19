@@ -23,12 +23,13 @@ def analyze():
     if not url:
         return jsonify({'error': 'No URL provided'}), 400
 
-    # Convert youtu.be short links to full YouTube format
-    if "youtu.be/" in url:
-        match = re.search(r"youtu\.be/([a-zA-Z0-9_-]+)", url)
-        if match:
-            video_id = match.group(1)
-            url = f"https://www.youtube.com/watch?v={video_id}"
+    # Extract video ID manually from any YouTube format
+    match = re.search(r"(?:v=|youtu\.be/)([a-zA-Z0-9_-]{11})", url)
+    if not match:
+        return jsonify({'error': 'Invalid YouTube URL format'}), 400
+
+    video_id = match.group(1)
+    url = f"https://www.youtube.com/watch?v={video_id}"
 
     try:
         yt = YouTube(url)
@@ -36,7 +37,6 @@ def analyze():
     except Exception as e:
         return jsonify({'error': f'Failed to retrieve video info: {str(e)}'}), 500
 
-    # Placeholder logic: assume 46% point control
     on_point_seconds = int(total_seconds * 0.46)
     percentage = round((on_point_seconds / total_seconds) * 100, 2)
 
