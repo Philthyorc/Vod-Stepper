@@ -1,7 +1,7 @@
 # vod_stepper/app.py
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from pytube import YouTube
+import yt_dlp
 import re
 
 app = Flask(__name__)
@@ -23,7 +23,7 @@ def analyze():
     if not url:
         return jsonify({'error': 'No URL provided'}), 400
 
-    # Extract video ID manually from any YouTube format
+    # Extract video ID from any YouTube format
     match = re.search(r"(?:v=|youtu\.be/)([a-zA-Z0-9_-]{11})", url)
     if not match:
         return jsonify({'error': 'Invalid YouTube URL format'}), 400
@@ -32,8 +32,16 @@ def analyze():
     url = f"https://www.youtube.com/watch?v={video_id}"
 
     try:
-        yt = YouTube(url)
-        total_seconds = yt.length
+        ydl_opts = {
+            'quiet': True,
+            'skip_download': True,
+            'cookiefile': 'youtube_cookies.txt'
+        }
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            total_seconds = int(info['duration'])
+
     except Exception as e:
         return jsonify({'error': f'Failed to retrieve video info: {str(e)}'}), 500
 
