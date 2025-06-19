@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template_string
 from downloader import download_video
 from frame_extractor import extract_frames
 from on_point_detector import analyze_frames
@@ -6,12 +6,18 @@ import os
 
 app = Flask(__name__)
 
-@app.route("/analyze", methods=["POST"])
+@app.route('/')
+def index():
+    return render_template_string('''
+        <h1>New World VOD Analyzer</h1>
+        <p>Paste a YouTube link in your local app to analyze how long you held point.</p>
+        <p>This server is running correctly.</p>
+    ''')
+
+@app.route('/analyze', methods=['POST'])
 def analyze():
     try:
-        data = request.get_json()
-        url = data.get("url")
-
+        url = request.json.get('url')
         video_path = download_video(url)
         run_id = os.path.splitext(os.path.basename(video_path))[0]
         frame_dir = os.path.join("output", "frames", run_id)
@@ -33,6 +39,6 @@ def analyze():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     from waitress import serve
-    serve(app, host="0.0.0.0", port=5000)
+    serve(app, host='0.0.0.0', port=5000)
