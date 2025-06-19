@@ -2,6 +2,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from pytube import YouTube
+import re
 
 app = Flask(__name__)
 CORS(app)
@@ -22,10 +23,12 @@ def analyze():
     if not url:
         return jsonify({'error': 'No URL provided'}), 400
 
-    # 🔁 Convert short youtu.be/ links to full format
+    # Convert youtu.be short links to full YouTube format
     if "youtu.be/" in url:
-        video_id = url.split("youtu.be/")[-1].split("?")[0]
-        url = f"https://www.youtube.com/watch?v={video_id}"
+        match = re.search(r"youtu\.be/([a-zA-Z0-9_-]+)", url)
+        if match:
+            video_id = match.group(1)
+            url = f"https://www.youtube.com/watch?v={video_id}"
 
     try:
         yt = YouTube(url)
@@ -33,7 +36,7 @@ def analyze():
     except Exception as e:
         return jsonify({'error': f'Failed to retrieve video info: {str(e)}'}), 500
 
-    # Placeholder logic for point detection
+    # Placeholder logic: assume 46% point control
     on_point_seconds = int(total_seconds * 0.46)
     percentage = round((on_point_seconds / total_seconds) * 100, 2)
 
