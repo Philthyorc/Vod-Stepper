@@ -3,7 +3,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>New World VOD Analyzer</title>
+  <title>New World VOD Stepper</title>
   <style>
     body { font-family: sans-serif; text-align: center; margin-top: 50px; }
     input { width: 400px; padding: 10px; }
@@ -13,7 +13,7 @@
 </head>
 <body>
 
-  <h1>🛡️ New World VOD Analyzer</h1>
+  <h1>🛡️ New World VOD Stepper</h1>
   <p>Paste a YouTube link below to see how long you held point</p>
 
   <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=..." />
@@ -32,7 +32,7 @@
       loading.style.display = "block";
 
       try {
-        const response = await fetch("http://127.0.0.1:5000/analyze", {
+        const response = await fetch("https://vod-stepper.onrender.com/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ url: url })

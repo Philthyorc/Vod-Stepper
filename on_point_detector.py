@@ -4,8 +4,9 @@ import os
 import cv2
 import numpy as np
 from typing import Dict, List
+from math import sqrt
 
-def analyze_frames(frames_dir: str) -> Dict:
+def analyze_frames(frames_dir: str, fps: int = 2, verbose: bool = False) -> Dict:
     results: List[Dict] = []
     frame_files = sorted(f for f in os.listdir(frames_dir) if f.endswith('.png'))
 
@@ -16,54 +17,66 @@ def analyze_frames(frames_dir: str) -> Dict:
         frame = cv2.imread(frame_path)
 
         if frame is None:
-            print(f"⚠️ Skipped unreadable frame: {filename}")
+            if verbose:
+                print(f"⚠️ Skipped unreadable frame: {filename}")
             continue
 
         h, w = frame.shape[:2]
-        center_x, center_y = w // 2, h // 2
-        radius = 120  # size of circle around the flag to scan
+        center_x = w // 2
+        feet_y = int(h * 0.75)
+        flag_y = h // 2
 
-        # Create a circular mask centered on screen
-        mask = np.zeros((h, w), dtype=np.uint8)
-        cv2.circle(mask, (center_x, center_y), radius, 255, thickness=-1)
+        # Distance from feet to flag center
+        distance_to_flag = sqrt((center_x - center_x) ** 2 + (feet_y - flag_y) ** 2)
 
-        # Convert to HSV and apply color mask
+        # Require feet to be within 100px of flag center
+        proximity_ok = distance_to_flag < 100
+
+        # Build flag mask (same as before)
+        flag_radius = 130
+        mask_flag = np.zeros((h, w), dtype=np.uint8)
+        cv2.circle(mask_flag, (center_x, flag_y), flag_radius, 255, thickness=-1)
+
+        # Convert to HSV
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-        # Red mask: includes low and high hue range
+        # Tighter red
         lower_red1 = np.array([0, 100, 100])
-        upper_red1 = np.array([10, 255, 255])
-        lower_red2 = np.array([160, 100, 100])
+        upper_red1 = np.array([5, 255, 255])
+        lower_red2 = np.array([170, 100, 100])
         upper_red2 = np.array([179, 255, 255])
         red_mask = cv2.inRange(hsv, lower_red1, upper_red1) | cv2.inRange(hsv, lower_red2, upper_red2)
 
-        # Blue mask
-        lower_blue = np.array([100, 100, 100])
-        upper_blue = np.array([130, 255, 255])
+        # Tighter blue
+        lower_blue = np.array([110, 100, 100])
+        upper_blue = np.array([125, 255, 255])
         blue_mask = cv2.inRange(hsv, lower_blue, upper_blue)
 
-        # Combine and apply mask to center ring
         combined_mask = cv2.bitwise_or(red_mask, blue_mask)
-        masked_area = cv2.bitwise_and(combined_mask, combined_mask, mask=mask)
+        masked_flag = cv2.bitwise_and(combined_mask, combined_mask, mask=mask_flag)
 
-        # Count how much of the circular area is red or blue
-        pixel_count = cv2.countNonZero(masked_area)
-        total_circle_pixels = cv2.countNonZero(mask)
-        coverage_ratio = pixel_count / total_circle_pixels if total_circle_pixels > 0 else 0
+        pixel_flag = cv2.countNonZero(masked_flag)
+        total_flag = cv2.countNonZero(mask_flag)
+        coverage_flag = pixel_flag / total_flag if total_flag > 0 else 0
 
-        on_point = coverage_ratio > 0.05  # 5% of ring must be red or blue
+        # Final check: must be near flag AND flag zone must be active
+        threshold = 0.035
+        on_point = proximity_ok and coverage_flag > threshold
+
+        if verbose:
+            print(f"{filename}: dist={distance_to_flag:.1f}, flag_coverage={coverage_flag:.3f} → {'ON' if on_point else 'off'}")
 
         results.append({
             "frame": filename,
-            "second": idx,
+            "second": round(idx / fps, 2),
             "on_point": on_point
         })
 
     return {
         "summary": {
             "total_frames": len(results),
-            "total_seconds": len(results),
-            "on_point_seconds": sum(1 for r in results if r["on_point"])
+            "total_seconds": round(len(results) / fps, 2),
+            "on_point_seconds": round(sum(1 for r in results if r["on_point"]) / fps, 2)
         },
         "details": results
     }
